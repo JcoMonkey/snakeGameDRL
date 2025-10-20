@@ -29,7 +29,7 @@ def run_episode(model, reward_mode="length", render=False, seed=7):
 
     env.close()
     return {
-        "reward": float(ep_reward),
+        "episode reward": float(ep_reward),
         "score": score,
         "max_length": max_length,
         "steps": steps,

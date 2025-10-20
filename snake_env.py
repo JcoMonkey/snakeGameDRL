@@ -40,6 +40,7 @@ class SnakeEnv(gym.Env):
         self.food_pos = [random.randrange(1, self.frame_size_x//10) * 10,
                          random.randrange(1, self.frame_size_y//10) * 10]
         self.score = 0
+        self.turnCount = 0
         self.direction = 3  # 0=UP,1=DOWN,2=LEFT,3=RIGHT
         self.done = False
         self.steps = 0
@@ -83,7 +84,8 @@ class SnakeEnv(gym.Env):
 
         # --- Reward for turning ---
         if self.direction != prev_direction:
-            reward += 3  # or however much you want
+            reward += 2  # or however much you want
+            self.turnCount += 1
 
         optimal_dir = self._get_direction_to_food()
 
@@ -119,7 +121,7 @@ class SnakeEnv(gym.Env):
                 reward = 0.1
 
         self.done = terminated
-        info = {"score": self.score}
+        info = {"score": self.score, "turn count": self.turnCount}
         return self._get_obs(), reward, terminated, False, info
 
     def render(self):

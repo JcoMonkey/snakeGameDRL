@@ -2,7 +2,8 @@
 
 A minimal, self‑contained example your students can run to learn DRL‑for‑testing with **Gymnasium**, **Stable‑Baselines3 (SB3)**, and **Python**. It includes:
 
-* A tiny Flappy Bird–style environment (`FlappyBirdEnv`) with two reward modes — **survival** and **coverage** — to illustrate how reward design changes agent behavior/testing goals.
+SNAKE THING I ROBBED THE FLAPPY BIRD
+
 * Ready‑to‑run **training**, **evaluation**, and **(optional) visualization** scripts.
 * Clear places to inject **faults/bugs** for testing objectives.
 
@@ -18,14 +19,14 @@ python3 -m venv .venv && source .venv/bin/activate  # (Windows: .venv\Scripts\ac
 pip install --upgrade pip
 pip install gymnasium stable-baselines3[extra] pygame numpy tensorboard
 
-# 3) Save the files below into the same folder, then train:
+# 3) Save the files below into the same folder, then train. choose mode if needed:
 python train.py --timesteps 200000 --reward_mode length --seed 7
 
 # 4) Evaluate the trained agent (renders optional)
 python eval.py --episodes 10 --render 0
 
-# (Optional) Watch a live episode with rendering
-python visualize.py --model_path models/ppo_flappy_survival --fps 60
+# (Optional) Watch a live episode with rendering, chooose mode as needed
+python visualize.py --model_path models/ppo_snake_length --fps 60 
 ```
 
 **Folder layout (created at runtime):**
