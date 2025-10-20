@@ -26,15 +26,17 @@ def run_episode(model, reward_mode="length", render=False, seed=7):
     score = int(info.get("score", 0))
     terminated = int(done and not trunc)
     truncated = int(trunc)
+    turnCount = int(info.get("turn count", 0))
 
     env.close()
     return {
-        "episode reward": float(ep_reward),
+        "reward": float(ep_reward),
         "score": score,
         "max_length": max_length,
         "steps": steps,
         "terminated": terminated,
-        "truncated": truncated
+        "truncated": truncated,
+        "turn count": turnCount
     }
 
 def main():
@@ -66,6 +68,9 @@ def main():
     mean_steps  = float(np.mean([r["steps"] for r in rows]))
     mean_length = float(np.mean([r["max_length"] for r in rows]))
     term_rate   = float(np.mean([r["terminated"] for r in rows]))
+    mean_turns = float(np.mean([r["turn count"] for r in rows]))
+
+
 
     print(f"Episodes: {len(rows)}")
     print(f"Mean reward: {mean_reward:.2f} ± {std_reward:.2f}")
@@ -73,9 +78,10 @@ def main():
     print(f"Mean max snake length: {mean_length:.2f}")
     print(f"Mean steps: {mean_steps:.2f}")
     print(f"Termination rate (death): {term_rate*100:.1f}%")
+    print(f"Mean turns: {mean_turns:.2f}")
 
     # Per-episode json
-    fieldnames = ["episode","reward","score","max_length","steps","terminated","truncated"]
+    fieldnames = ["episode","reward","score","max_length","steps","terminated","truncated","turn count"]
     with open(args.json_out, "w", newline="") as f:
         json.dump(rows, f, indent=2)
     print(f"Saved metrics to {args.json_out}")
