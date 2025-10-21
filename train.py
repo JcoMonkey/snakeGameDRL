@@ -5,6 +5,7 @@ import gymnasium as gym
 from stable_baselines3 import PPO
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.logger import configure
+from stable_baselines3.common.callbacks import EvalCallback
 
 from snake_env import SnakeEnv   # <-- Changed this
 
@@ -27,6 +28,8 @@ def main():
     os.makedirs(args.modeldir, exist_ok=True)
 
     env = make_env(reward_mode=args.reward_mode, seed=args.seed)
+    eval_env = make_env(reward_mode=args.reward_mode, seed=args.seed + 100)
+
 
     model = PPO(
         policy="MlpPolicy",
@@ -41,12 +44,25 @@ def main():
         n_epochs=10,
         learning_rate=3e-4,
         clip_range=0.2,
+        ent_coef = 0.10,
+
     )
 
     new_logger = configure(args.logdir, ["stdout", "tensorboard"])
     model.set_logger(new_logger)
 
-    model.learn(total_timesteps=args.timesteps, progress_bar=True)
+    eval_callback = EvalCallback(
+        eval_env,
+        best_model_save_path=args.modeldir,       # Folder to save best model
+        log_path=args.logdir,                     # Where to log info
+        eval_freq=10_000,                         # How often to evaluate (e.g. every 10k steps)
+        deterministic=True,                       # Use deterministic actions
+        render=False,                             # Do not render during eval
+        n_eval_episodes=5,                        # Evaluate on 5 episodes for each checkpoint
+        verbose=1
+    )
+
+    model.learn(total_timesteps=args.timesteps, progress_bar=True, callback=eval_callback)
 
     save_name = f"ppo_snake_{args.reward_mode}"   # This is the base name
     path = os.path.join(args.modeldir, save_name) # This is the full path **without .zip**
