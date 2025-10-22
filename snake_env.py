@@ -37,7 +37,7 @@ class SnakeEnv(gym.Env):
     def reset(self, *, seed=None, options=None):
         self.snake_pos = [100, 50]
         self.snake_body = [[100, 50], [90, 50], [80, 50]]
-        self.food_pos = [300,0]
+        self.food_pos = [300,50]
         #[random.randrange(1, self.frame_size_x//10) * 10,
         #random.randrange(1, self.frame_size_y//10) * 10]
         self.score = 0
@@ -80,15 +80,16 @@ class SnakeEnv(gym.Env):
             self.turnCount += 1
 
         
-        #reward += self._turning_to_food_reward(prev_direction)
-        #reward += self._axis_direction_reward()
-        #reward += self._wall_evasion_reward(prev_direction)
-        #reward += self._distance_based_reward()
-        #reward += self._food_eaten_reward(ate_food)
+        reward += self._turning_to_food_reward(prev_direction)
+        reward += self._axis_direction_reward()
+        reward += self._wall_evasion_reward(prev_direction)
+        reward += self._distance_based_reward()
+        reward += self._food_eaten_reward(ate_food)
         reward += self._survival_reward()
         reward += self._death_penalty(terminated)
         #reward += self._heading_toward_wall_punish()
-        #reward += self._self_collision_avoidance_reward(action)
+        reward += self._self_collision_avoidance_reward(action)
+        reward += self._any_turn_reward(prev_direction)
 
 
         # Eat food
