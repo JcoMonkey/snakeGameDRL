@@ -5,7 +5,7 @@ import gymnasium as gym
 from stable_baselines3 import PPO
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.logger import configure
-from stable_baselines3.common.callbacks import EvalCallback
+from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback, CallbackList
 
 from snake_env import SnakeEnv   # <-- Changed this
 
@@ -30,7 +30,6 @@ def main():
     env = make_env(reward_mode=args.reward_mode, seed=args.seed)
     eval_env = make_env(reward_mode=args.reward_mode, seed=args.seed + 100)
 
-
     model = PPO(
         policy="MlpPolicy",
         env=env,
@@ -45,22 +44,31 @@ def main():
         learning_rate=3e-4,
         clip_range=0.2,
         ent_coef = 0.01,
-
     )
 
     new_logger = configure(args.logdir, ["stdout", "tensorboard"])
     model.set_logger(new_logger)
 
+    checkpoint_callback = CheckpointCallback(
+        save_freq=10000,              # how often (in environment steps) to save
+        save_path="./checkpoints/",  # folder to store the saved models
+        name_prefix="snake_ppo",     # name given to checkpoint files
+        save_replay_buffer=True,      # optional, saves replay buffer if available
+        save_vecnormalize=True        # optional, saves normalization statistics
+    )
+
     eval_callback = EvalCallback(
         eval_env,
         best_model_save_path=args.modeldir,       # Folder to save best model
         log_path=args.logdir,                     # Where to log info
-        eval_freq=10_000,                         # How often to evaluate (e.g. every 10k steps)
+        eval_freq=5000,                         # How often to evaluate (e.g. every 10k steps)
         deterministic=True,                       # Use deterministic actions
         render=False,                             # Do not render during eval
         n_eval_episodes=5,                        # Evaluate on 5 episodes for each checkpoint
         verbose=1
     )
+
+    eval_checkpoint_callback = CallbackList([checkpoint_callback, eval_callback])
 
     model.learn(total_timesteps=args.timesteps, progress_bar=True, callback=eval_callback)
 

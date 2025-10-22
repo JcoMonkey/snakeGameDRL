@@ -37,7 +37,7 @@ class SnakeEnv(gym.Env):
     def reset(self, *, seed=None, options=None):
         self.snake_pos = [100, 50]
         self.snake_body = [[100, 50], [90, 50], [80, 50]]
-        self.food_pos = [300,50]
+        self.food_pos = [300,300]
         #[random.randrange(1, self.frame_size_x//10) * 10,
         #random.randrange(1, self.frame_size_y//10) * 10]
         self.score = 0
@@ -87,7 +87,7 @@ class SnakeEnv(gym.Env):
         reward += self._food_eaten_reward(ate_food)
         reward += self._survival_reward()
         reward += self._death_penalty(terminated)
-        #reward += self._heading_toward_wall_punish()
+        reward += self._heading_toward_wall_punish()
         reward += self._self_collision_avoidance_reward(action)
         reward += self._any_turn_reward(prev_direction)
 
@@ -185,7 +185,7 @@ class SnakeEnv(gym.Env):
 
     def _food_eaten_reward(self, ate_food):
         if ate_food and self.reward_mode == "length":
-            return 10
+            return 20
         return 0
     
     def _turning_to_food_reward(self, prev_direction):
@@ -200,7 +200,7 @@ class SnakeEnv(gym.Env):
     
     def _any_turn_reward(self, prev_direction):
         if self.direction != prev_direction:
-            return 2
+            return 3
         return 0
     
     def _death_penalty(self, dead):
@@ -208,7 +208,7 @@ class SnakeEnv(gym.Env):
     
     def _survival_reward(self):
         if self.reward_mode == "length":
-            return 1
+            return 0.5
         elif self.reward_mode == "survival":
             return 0.1
         return 0
@@ -233,7 +233,7 @@ class SnakeEnv(gym.Env):
         
         return bounded_reward
     
-    def _heading_toward_wall_punish(self, margin=20):
+    def _heading_toward_wall_punish(self, margin=30):
         x, y = self.snake_pos
         reward = 0
         # Up
@@ -267,5 +267,5 @@ class SnakeEnv(gym.Env):
             return -5
         else:
             # Reward for avoiding collision
-            return 0.2
+            return 1
 
