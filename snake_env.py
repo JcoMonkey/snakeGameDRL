@@ -70,7 +70,7 @@ class SnakeEnv(gym.Env):
         self.snake_body.insert(0, list(self.snake_pos))
         
         terminated = False
-        reward = 0
+        stepReward = 0
 
         ate_food = self.snake_pos == self.food_pos
 
@@ -81,20 +81,20 @@ class SnakeEnv(gym.Env):
         if self.direction != prev_direction:
             self.turnCount += 1
 
+        if self.reward_mode == "survival":
+            stepReward = self._survival(terminated)
         
         #reward += self._turning_to_food_reward(prev_direction)
         #reward += self._axis_direction_reward()
-        reward += self._food_distance_based_reward()
-        reward += self._food_eaten_reward(ate_food)
+        #reward += self._food_distance_based_reward()
+        #reward += self._food_eaten_reward(ate_food)
         
         #reward += self._wall_evasion_reward(prev_direction)
-        reward += self._survival_reward()
-        reward += self._death_penalty(terminated)
-        reward += self._heading_toward_wall_punish()
+        #reward += self._survival_reward(modifier, terminated)
         #reward += self._self_collision_avoidance_reward(action)
         #reward += self._distance_from_wall_reward()
 
-        reward += self._any_turn_reward(prev_direction)
+        #stepReward += self._any_turn_reward(prev_direction)
 
 
         # Eat food
@@ -113,7 +113,7 @@ class SnakeEnv(gym.Env):
 
         terminated = terminated or time_out
         info = {"score": self.score, "turn_count": self.turnCount, "time_out": time_out}
-        return self._get_obs(), reward, terminated, False, info
+        return self._get_obs(), stepReward, terminated, False, info
 
     def render(self):
         # Only for render_mode == "human"
@@ -238,12 +238,11 @@ class SnakeEnv(gym.Env):
     def _death_penalty(self, dead):
         return -50 if dead else 0
     
-    def _survival_reward(self):
-        if self.reward_mode == "length":
-            return 0.01
-        elif self.reward_mode == "survival":
-            return 0.1
-        return 0
+    def _survival_reward(self, modifier, terminated):
+        if not terminated:
+            return modifier
+        else:
+            return 0
 
     def _food_distance_based_reward(self):
         sx, sy = self.snake_pos
@@ -309,3 +308,17 @@ class SnakeEnv(gym.Env):
         min_dist = min(dist_x, dist_y)
         return min_dist / 100  # Reward staying near the center
 
+
+    def _survival(self, terminated):
+        totalReward = 0
+        totalReward += self._survival_reward(0.1, terminated)
+        totalReward += self._death_penalty(terminated)
+        totalReward += self._heading_toward_wall_punish()
+
+        return totalReward
+
+    def _glutton(self, terminated):
+        totalReward = 0
+        r+= self._survival_reward(0.1, terminated)
+        r+= 0
+        return totalReward
