@@ -3,41 +3,44 @@ import argparse, os, csv
 import numpy as np
 from stable_baselines3 import PPO
 from snake_env import SnakeEnv   # updated import
+from stable_baselines3.common.vec_env import DummyVecEnv, VecTransposeImage
+
 import json
 
 def run_episode(model, reward_mode="length", render=False, seed=7):
-    env = SnakeEnv(render_mode="human" if render else None, reward_mode=reward_mode, seed=seed)
-    obs, info = env.reset()
-    done = trunc = False
+    env = DummyVecEnv([lambda: SnakeEnv(
+        render_mode="human" if render else None,
+        reward_mode=reward_mode,
+        seed=seed
+    )])
+    env = VecTransposeImage(env)
 
-    ep_reward = 0.0
-    steps = 0
-    max_length = 0
+    obs = env.reset()
+    done = False
+    ep_reward, steps, max_length = 0.0, 0, 0
 
-    while not (done or trunc):
+    while not done:
         action, _ = model.predict(obs, deterministic=True)
-        obs, r, done, trunc, info = env.step(int(action))
-        ep_reward += r
+        obs, rewards, dones, infos = env.step([int(action)])
+        ep_reward += float(rewards[0])
         steps += 1
-        snake_length = len(env.snake_body)
+        snake_length = len(env.envs[0].snake_body)
         max_length = max(max_length, snake_length)
+        done = dones[0]
 
-    # Episode-level metrics from env info
-    score = int(info.get("score", 0))
-    terminated = int(done and not trunc)
-    truncated = int(trunc)
-    turnCount = int(info.get("turn count", 0))
-
+    info = infos[0]
     env.close()
+
     return {
-        "reward": float(ep_reward),
-        "score": score,
+        "reward": ep_reward,
+        "score": int(info.get("score", 0)),
         "max_length": max_length,
         "steps": steps,
-        "terminated": terminated,
-        "truncated": truncated,
-        "turn count": turnCount
+        "terminated": int(done),
+        "time_out": int(info.get("time_out", 0)),
+        "turn_count": int(info.get("turn_count", 0))
     }
+
 
 def main():
     p = argparse.ArgumentParser()
@@ -68,8 +71,8 @@ def main():
     mean_steps  = float(np.mean([r["steps"] for r in rows]))
     mean_length = float(np.mean([r["max_length"] for r in rows]))
     term_rate   = float(np.mean([r["terminated"] for r in rows]))
-    mean_turns = float(np.mean([r["turn count"] for r in rows]))
-
+    mean_turns = float(np.mean([r["turn_count"] for r in rows]))
+    mean_timeout = float(np.mean([r["time_out"] for r in rows]))
 
 
     print(f"Episodes: {len(rows)}")
@@ -78,10 +81,11 @@ def main():
     print(f"Mean max snake length: {mean_length:.2f}")
     print(f"Mean steps: {mean_steps:.2f}")
     print(f"Termination rate (death): {term_rate*100:.1f}%")
+    print(f"time_out (truncate): {mean_timeout*100:.1f}%")
     print(f"Mean turns: {mean_turns:.2f}")
 
     # Per-episode json
-    fieldnames = ["episode","reward","score","max_length","steps","terminated","truncated","turn count"]
+    fieldnames = ["episode","reward","score","max_length","steps","terminated","mean_timeout","turn_count"]
     with open(args.json_out, "w", newline="") as f:
         json.dump(rows, f, indent=2)
     print(f"Saved metrics to {args.json_out}")

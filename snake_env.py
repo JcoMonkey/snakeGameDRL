@@ -7,10 +7,10 @@ import random
 class SnakeEnv(gym.Env):
     metadata = {"render_modes": ["human"], "render_fps": 25}
 
-    def __init__(self, render_mode=None, reward_mode="length", seed=7):
+    def __init__(self, render_mode=None, reward_mode="length", seed=7, max_steps=4000):
         super().__init__()
-        self.frame_size_x = 720
-        self.frame_size_y = 480
+        self.frame_size_x = 300
+        self.frame_size_y = 200
         self.reward_mode = reward_mode
         self.action_space = spaces.Discrete(4)
         self.observation_space = spaces.Box(
@@ -19,6 +19,8 @@ class SnakeEnv(gym.Env):
             dtype=np.uint8
         )
         self.render_mode = render_mode
+        self.max_steps = max_steps
+
 
         # Pygame setup only if rendering
         if render_mode == "human":
@@ -35,8 +37,8 @@ class SnakeEnv(gym.Env):
         self.reset()
 
     def reset(self, *, seed=None, options=None):
-        self.snake_pos = [100, 50]
-        self.snake_body = [[100, 50], [90, 50], [80, 50]]
+        self.snake_pos = [100, 40]
+        self.snake_body = [[100, 40], [90, 40], [80, 40]]
         self.food_pos = [random.randrange(1, self.frame_size_x//10) * 10,
         random.randrange(1, self.frame_size_y//10) * 10]
         self.score = 0
@@ -45,6 +47,7 @@ class SnakeEnv(gym.Env):
         self.done = False
         self.steps = 0
         self.prev_food_dist = self._get_food_distance()
+        #print(f'obs: {self._get_obs}')
         return self._get_obs(), {}
 
     def step(self, action):
@@ -81,15 +84,16 @@ class SnakeEnv(gym.Env):
         
         #reward += self._turning_to_food_reward(prev_direction)
         #reward += self._axis_direction_reward()
-        #reward += self._food_distance_based_reward()
-        #reward += self._food_eaten_reward(ate_food)
+        reward += self._food_distance_based_reward()
+        reward += self._food_eaten_reward(ate_food)
         
-        reward += self._wall_evasion_reward(prev_direction)
-        #reward += self._survival_reward()
+        #reward += self._wall_evasion_reward(prev_direction)
+        reward += self._survival_reward()
         reward += self._death_penalty(terminated)
-        #reward += self._heading_toward_wall_punish()
+        reward += self._heading_toward_wall_punish()
         #reward += self._self_collision_avoidance_reward(action)
-        
+        #reward += self._distance_from_wall_reward()
+
         reward += self._any_turn_reward(prev_direction)
 
 
@@ -102,10 +106,13 @@ class SnakeEnv(gym.Env):
         else:
             self.snake_body.pop()
 
-        #print(f"Turn:{self._turning_to_food_reward(prev_direction)} WallEvasion:{self._wall_evasion_reward(prev_direction)} HeadWall:{self._heading_toward_wall_punish()} Death:{self._death_penalty(terminated)} Axis:{self._axis_direction_reward()} Dist:{self._distance_based_reward()} Apple:{self._food_eaten_reward(ate_food)}")
+        #print(f"Turn:{self.turnCount} WallEvasion:{self._wall_evasion_reward(prev_direction)} HeadWall:{self._heading_toward_wall_punish()} Death:{self._death_penalty(terminated)} Axis:{self._axis_direction_reward()} Dist:{self._food_distance_based_reward()} Apple:{self._food_eaten_reward(ate_food)}")
 
-        self.done = terminated
-        info = {"score": self.score, "turn count": self.turnCount}
+        self.steps += 1  # Increment step count
+        time_out = self.steps >= self.max_steps
+
+        terminated = terminated or time_out
+        info = {"score": self.score, "turn_count": self.turnCount, "time_out": time_out}
         return self._get_obs(), reward, terminated, False, info
 
     def render(self):
@@ -125,10 +132,34 @@ class SnakeEnv(gym.Env):
             pygame.quit()
 
     def _get_obs(self):
-        # Here you can return a grid representation or positions; for RL, more info is better
         obs = np.zeros(self.observation_space.shape, dtype=np.uint8)
-        # Custom logic for RL can be added here
+        rows, cols, _ = obs.shape
+        scale = 10  # Each grid cell is 10x10 
+
+        # Draw walls (first and last row & column)
+        obs[0, :, :] = [255, 0, 0]
+        obs[-1, :, :] = [255, 0, 0]
+        obs[:, 0, :] = [255, 0, 0]
+        obs[:, -1, :] = [255, 0, 0]
+
+        # Draw snake body (except head)
+        for pos in self.snake_body[1:]:
+            x, y = pos[0] // scale, pos[1] // scale
+            if 0 <= y < rows and 0 <= x < cols:
+                obs[y, x] = [0, 255, 0]
+
+        # Draw snake head (first element of snake_body)
+        x, y = self.snake_body[0][0] // scale, self.snake_body[0][1] // scale
+        if 0 <= y < rows and 0 <= x < cols:
+            obs[y, x] = [0, 0, 255]
+
+        # Draw food
+        fx, fy = self.food_pos[0] // scale, self.food_pos[1] // scale
+        if 0 <= fy < rows and 0 <= fx < cols:
+            obs[fy, fx] = [255, 255, 255]
+
         return obs
+
     
     def _get_food_distance(self):
         # Uses Manhattan distance: d = |x2 - x1| + |y2 - y1| 
@@ -186,7 +217,7 @@ class SnakeEnv(gym.Env):
 
     def _food_eaten_reward(self, ate_food):
         if ate_food and self.reward_mode == "length":
-            return 5
+            return 10
         return 0
     
     def _turning_to_food_reward(self, prev_direction):
@@ -201,7 +232,7 @@ class SnakeEnv(gym.Env):
     
     def _any_turn_reward(self, prev_direction):
         if self.direction != prev_direction:
-            return 1
+            return -0.01
         return 0
     
     def _death_penalty(self, dead):
@@ -209,7 +240,7 @@ class SnakeEnv(gym.Env):
     
     def _survival_reward(self):
         if self.reward_mode == "length":
-            return 0.001
+            return 0.01
         elif self.reward_mode == "survival":
             return 0.1
         return 0
@@ -230,25 +261,26 @@ class SnakeEnv(gym.Env):
         raw_distance_reward = reward_x + reward_y
     
         # First, apply lower bound (e.g. -1.5), then upper bound (e.g. 2.0)
-        bounded_reward = max(-0.1, min(raw_distance_reward, 0.2))
+        bounded_reward = max(-0.02, min(raw_distance_reward, 0.02))
         
         return bounded_reward
+
     
     def _heading_toward_wall_punish(self, margin=30):
         x, y = self.snake_pos
         reward = 0
         # Up
         if y < margin and self.direction == 0:
-            reward -= 5
+            reward -= 0.5
         # Down
         if y > self.frame_size_y - margin - 10 and self.direction == 1:
-            reward -= 5
+            reward -= 0.5
         # Left
         if x < margin and self.direction == 2:
-            reward -= 5
+            reward -= 0.5
         # Right
         if x > self.frame_size_x - margin - 10 and self.direction == 3:
-            reward -= 5
+            reward -= 0.5
         return reward
 
     def _self_collision_avoidance_reward(self, action):
@@ -265,8 +297,15 @@ class SnakeEnv(gym.Env):
         next_pos = [x + dx, y + dy]
         if next_pos in self.snake_body:
             # Penalize for imminent collision with self
-            return -1
+            return -5
         else:
             # Reward for avoiding collision
-            return 1
+            return 2
+        
+    def _distance_from_wall_reward(self):
+        x, y = self.snake_pos
+        dist_x = min(x, self.frame_size_x - x)
+        dist_y = min(y, self.frame_size_y - y)
+        min_dist = min(dist_x, dist_y)
+        return min_dist / 100  # Reward staying near the center
 
