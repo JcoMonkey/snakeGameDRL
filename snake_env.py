@@ -37,9 +37,8 @@ class SnakeEnv(gym.Env):
     def reset(self, *, seed=None, options=None):
         self.snake_pos = [100, 50]
         self.snake_body = [[100, 50], [90, 50], [80, 50]]
-        self.food_pos = [300,300]
-        #[random.randrange(1, self.frame_size_x//10) * 10,
-        #random.randrange(1, self.frame_size_y//10) * 10]
+        self.food_pos = [random.randrange(1, self.frame_size_x//10) * 10,
+        random.randrange(1, self.frame_size_y//10) * 10]
         self.score = 0
         self.turnCount = 0
         self.direction = 3  # 0=UP,1=DOWN,2=LEFT,3=RIGHT
@@ -80,15 +79,17 @@ class SnakeEnv(gym.Env):
             self.turnCount += 1
 
         
-        reward += self._turning_to_food_reward(prev_direction)
-        reward += self._axis_direction_reward()
+        #reward += self._turning_to_food_reward(prev_direction)
+        #reward += self._axis_direction_reward()
+        #reward += self._food_distance_based_reward()
+        #reward += self._food_eaten_reward(ate_food)
+        
         reward += self._wall_evasion_reward(prev_direction)
-        reward += self._distance_based_reward()
-        reward += self._food_eaten_reward(ate_food)
-        reward += self._survival_reward()
+        #reward += self._survival_reward()
         reward += self._death_penalty(terminated)
-        reward += self._heading_toward_wall_punish()
-        reward += self._self_collision_avoidance_reward(action)
+        #reward += self._heading_toward_wall_punish()
+        #reward += self._self_collision_avoidance_reward(action)
+        
         reward += self._any_turn_reward(prev_direction)
 
 
@@ -160,60 +161,60 @@ class SnakeEnv(gym.Env):
         # Horizontal movement
         if sx < fx:
             if self.direction == 3:  # moving right toward food
-                reward += 2
+                reward += 1
             elif self.direction == 2:  # moving left away from food
-                reward -= 2
+                reward -= 1
         elif sx > fx:
             if self.direction == 2:  # moving left toward food
-                reward += 2
+                reward += 1
             elif self.direction == 3:  # moving right away from food
-                reward -= 2
+                reward -= 1
 
         # Vertical movement
         if sy < fy:
             if self.direction == 1:  # moving down toward food
-                reward += 2
+                reward += 1
             elif self.direction == 0:  # moving up away from food
-                reward -= 2
+                reward -= 1
         elif sy > fy:
             if self.direction == 0:  # moving up toward food
-                reward += 2
+                reward += 1
             elif self.direction == 1:  # moving down away from food
-                reward -= 2
+                reward -= 1
 
         return reward
 
     def _food_eaten_reward(self, ate_food):
         if ate_food and self.reward_mode == "length":
-            return 20
+            return 5
         return 0
     
     def _turning_to_food_reward(self, prev_direction):
         if self.direction != prev_direction and self.direction == self._get_direction_to_food():
-            return 10
+            return 0
         return 0
     
     def _wall_evasion_reward(self, prev_direction):
         if self._near_wall(margin=20) and self.direction != prev_direction:
-            return 10
+            return 5
         return 0
     
     def _any_turn_reward(self, prev_direction):
         if self.direction != prev_direction:
-            return 3
+            return 1
         return 0
     
     def _death_penalty(self, dead):
-        return -70 if dead else 0
+        return -50 if dead else 0
     
     def _survival_reward(self):
         if self.reward_mode == "length":
-            return 0.5
+            return 0.001
         elif self.reward_mode == "survival":
             return 0.1
         return 0
 
-    def _distance_based_reward(self):
+    def _food_distance_based_reward(self):
         sx, sy = self.snake_pos
         fx, fy = self.food_pos
 
@@ -238,16 +239,16 @@ class SnakeEnv(gym.Env):
         reward = 0
         # Up
         if y < margin and self.direction == 0:
-            reward -= 0.5
+            reward -= 5
         # Down
         if y > self.frame_size_y - margin - 10 and self.direction == 1:
-            reward -= 0.5
+            reward -= 5
         # Left
         if x < margin and self.direction == 2:
-            reward -= 0.5
+            reward -= 5
         # Right
         if x > self.frame_size_x - margin - 10 and self.direction == 3:
-            reward -= 0.5
+            reward -= 5
         return reward
 
     def _self_collision_avoidance_reward(self, action):
@@ -264,7 +265,7 @@ class SnakeEnv(gym.Env):
         next_pos = [x + dx, y + dy]
         if next_pos in self.snake_body:
             # Penalize for imminent collision with self
-            return -5
+            return -1
         else:
             # Reward for avoiding collision
             return 1

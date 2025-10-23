@@ -30,6 +30,7 @@ def main():
     env = make_env(reward_mode=args.reward_mode, seed=args.seed)
     eval_env = make_env(reward_mode=args.reward_mode, seed=args.seed + 100)
 
+    
     model = PPO(
         policy="MlpPolicy",
         env=env,
@@ -43,7 +44,7 @@ def main():
         n_epochs=10,
         learning_rate=3e-4,
         clip_range=0.2,
-        ent_coef = 0.01,
+        ent_coef = 0.05,
     )
 
     new_logger = configure(args.logdir, ["stdout", "tensorboard"])
