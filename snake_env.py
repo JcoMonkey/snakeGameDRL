@@ -83,6 +83,9 @@ class SnakeEnv(gym.Env):
 
         if self.reward_mode == "survival":
             stepReward = self._survival(terminated)
+
+        if self.reward_mode == "length":
+            stepReward = self._length(terminated, ate_food)
         
         #reward += self._turning_to_food_reward(prev_direction)
         #reward += self._axis_direction_reward()
@@ -215,9 +218,9 @@ class SnakeEnv(gym.Env):
 
         return reward
 
-    def _food_eaten_reward(self, ate_food):
-        if ate_food and self.reward_mode == "length":
-            return 10
+    def _food_eaten_reward(self, ate_food, modifier):
+        if ate_food:
+            return modifier
         return 0
     
     def _turning_to_food_reward(self, prev_direction):
@@ -235,16 +238,16 @@ class SnakeEnv(gym.Env):
             return -0.01
         return 0
     
-    def _death_penalty(self, dead):
-        return -50 if dead else 0
+    def _death_penalty(self, dead, modifier):
+        return modifier if dead else 0
     
-    def _survival_reward(self, modifier, terminated):
-        if not terminated:
+    def _survival_reward(self, modifier, dead):
+        if not dead:
             return modifier
         else:
             return 0
 
-    def _food_distance_based_reward(self):
+    def _food_distance_based_reward(self, upBound, lowBound):
         sx, sy = self.snake_pos
         fx, fy = self.food_pos
 
@@ -260,26 +263,26 @@ class SnakeEnv(gym.Env):
         raw_distance_reward = reward_x + reward_y
     
         # First, apply lower bound (e.g. -1.5), then upper bound (e.g. 2.0)
-        bounded_reward = max(-0.02, min(raw_distance_reward, 0.02))
+        bounded_reward = max(lowBound, min(raw_distance_reward, upBound))
         
         return bounded_reward
 
     
-    def _heading_toward_wall_punish(self, margin=30):
+    def _heading_toward_wall_punish(self, modifier, margin=30):
         x, y = self.snake_pos
         reward = 0
         # Up
         if y < margin and self.direction == 0:
-            reward -= 0.5
+            reward -= modifier
         # Down
         if y > self.frame_size_y - margin - 10 and self.direction == 1:
-            reward -= 0.5
+            reward -= modifier
         # Left
         if x < margin and self.direction == 2:
-            reward -= 0.5
+            reward -= modifier
         # Right
         if x > self.frame_size_x - margin - 10 and self.direction == 3:
-            reward -= 0.5
+            reward -= modifier
         return reward
 
     def _self_collision_avoidance_reward(self, action):
@@ -312,13 +315,19 @@ class SnakeEnv(gym.Env):
     def _survival(self, terminated):
         totalReward = 0
         totalReward += self._survival_reward(0.1, terminated)
-        totalReward += self._death_penalty(terminated)
-        totalReward += self._heading_toward_wall_punish()
+        totalReward += self._death_penalty(terminated, -50)
+        totalReward += self._heading_toward_wall_punish(0.5)
 
         return totalReward
 
-    def _glutton(self, terminated):
+    def _length(self, terminated, ate_food):
         totalReward = 0
-        r+= self._survival_reward(0.1, terminated)
-        r+= 0
+        totalReward += self._death_penalty(terminated, -50)
+        totalReward += self._food_eaten_reward(ate_food, 50)
+        totalReward += self._heading_toward_wall_punish(0.5)
+        totalReward += self._survival_reward(0.01, terminated)
+        #totalReward += self._axis_direction_reward()
+        reward += self._food_distance_based_reward(1, -1)
+
+
         return totalReward
