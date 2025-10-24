@@ -4,7 +4,7 @@ import os
 import gymnasium as gym
 from stable_baselines3 import A2C
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.logger import configure
+from stable_baselines3.common.logger import configure
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback, CallbackList
 
 from snake_env import SnakeEnv
@@ -22,6 +22,8 @@ def main():
     parser.add_argument("--logdir", type = str, default = "./logs")
     parser.add_argument("--modeldir", type =str, default = "./models")
 
+    args = parser.parse_args()
+    
     os.makedirs(args.logdir, exist_ok = True)
     os.makedirs(args.modeldir, exist_ok = True)
 
