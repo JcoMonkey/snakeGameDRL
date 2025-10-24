@@ -69,8 +69,14 @@ class SnakeEnv(gym.Env):
 
         self.snake_body.insert(0, list(self.snake_pos))
         
-        terminated = False
         stepReward = 0
+        terminated = False
+        wall_body_turn_save = False
+        snake_body_turn_save = False
+        lastFood = 0
+        #divide steps by score (reate of eating)
+        #turn towards food
+        #turnsaverage between eating
 
         ate_food = self.snake_pos == self.food_pos
 
@@ -324,8 +330,7 @@ class SnakeEnv(gym.Env):
         totalReward += self._death_penalty(terminated, -50)
         totalReward += self._heading_toward_wall_punish(0.5)
         totalReward += self._food_eaten_reward(ate_food, 50)
-
-
-
+        totalReward += self._wall_evasion_reward(prev_direction, 2)
+        totalReward += self._food_distance_based_reward(3,-2)
 
         return totalReward
