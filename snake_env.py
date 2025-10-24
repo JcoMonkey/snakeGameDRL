@@ -85,15 +85,12 @@ class SnakeEnv(gym.Env):
             stepReward = self._survival(terminated)
 
         if self.reward_mode == "length":
-            stepReward = self._length(terminated, ate_food)
+            stepReward = self._length(terminated, ate_food, prev_direction)
         
         #reward += self._turning_to_food_reward(prev_direction)
         #reward += self._axis_direction_reward()
         #reward += self._food_distance_based_reward()
-        #reward += self._food_eaten_reward(ate_food)
-        
-        #reward += self._wall_evasion_reward(prev_direction)
-        #reward += self._survival_reward(modifier, terminated)
+
         #reward += self._self_collision_avoidance_reward(action)
         #reward += self._distance_from_wall_reward()
 
@@ -228,10 +225,11 @@ class SnakeEnv(gym.Env):
             return 0
         return 0
     
-    def _wall_evasion_reward(self, prev_direction):
+    def _wall_evasion_reward(self, prev_direction, modifier):
         if self._near_wall(margin=20) and self.direction != prev_direction:
-            return 5
-        return 0
+            return modifier
+        else:
+            return 0
     
     def _any_turn_reward(self, prev_direction):
         if self.direction != prev_direction:
@@ -320,14 +318,14 @@ class SnakeEnv(gym.Env):
 
         return totalReward
 
-    def _length(self, terminated, ate_food):
+    def _length(self, terminated, ate_food, prev_direction):
         totalReward = 0
+        totalReward += self._survival_reward(0.1, terminated)
         totalReward += self._death_penalty(terminated, -50)
-        totalReward += self._food_eaten_reward(ate_food, 50)
         totalReward += self._heading_toward_wall_punish(0.5)
-        totalReward += self._survival_reward(0.01, terminated)
-        #totalReward += self._axis_direction_reward()
-        reward += self._food_distance_based_reward(1, -1)
+        totalReward += self._food_eaten_reward(ate_food, 50)
+
+
 
 
         return totalReward

@@ -46,6 +46,7 @@ def main():
         clip_range=0.2,
         ent_coef = 0.01,
         vf_coef = 0.5,
+
     )
 
     new_logger = configure(args.logdir, ["stdout", "tensorboard"])
@@ -72,7 +73,7 @@ def main():
 
     eval_checkpoint_callback = CallbackList([checkpoint_callback, eval_callback])
 
-    model.learn(total_timesteps=args.timesteps, progress_bar=True, callback=eval_checkpoint_callback)
+    model.learn(total_timesteps=args.timesteps, progress_bar=True, callback=eval_callback)
 
     save_name = f"ppo_snake_{args.reward_mode}"   # This is the base name
     path = os.path.join(args.modeldir, save_name) # This is the full path **without .zip**

@@ -96,3 +96,21 @@ Key ideas:
 4. **Multiple runs**
    If you train with different configs (e.g., PPO vs A2C, survival vs coverage rewards), point them to different subfolders under `logs/` (e.g., `logs/ppo_survival/`, `logs/a2c_coverage/`). TensorBoard will let you overlay/compare them.
 
+
+
+# commands
+```
+python train_ppo.py --timesteps 200000 --reward_mode survival --seed 7
+```
+
+```
+python visualize.py --model_path models/ppo_snake_survival --fps 60
+```
+
+```
+python eval.py --model_path models/ppo_snake_survival --reward_mode survival --episodes 10 --render 0 --json_out logs/survival_eval.json
+```
+or
+```
+python eval.py --model_path models/ppo_snake_survival --reward_mode survival --episodes 10 --render 0 --json_out logs/survival_eval.json
+```
