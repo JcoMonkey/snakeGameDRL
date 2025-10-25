@@ -1,6 +1,4 @@
-# FlappyBird DRL Mini‑Project (Gymnasium + Stable‑Baselines3)
-
-A minimal, self‑contained example your students can run to learn DRL‑for‑testing with **Gymnasium**, **Stable‑Baselines3 (SB3)**, and **Python**. It includes:
+# Snake DRL Mini‑Project (Gymnasium + Stable‑Baselines3)
 
 SNAKE THING I ROBBED THE FLAPPY BIRD
 
