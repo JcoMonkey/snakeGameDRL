@@ -15,6 +15,8 @@ def main():
     obs, info = env.reset()
     done, trunc = False, False
 
+
+
     # Run one episode with deterministic actions
     while not (done or trunc):
         action, _ = model.predict(obs, deterministic=True)

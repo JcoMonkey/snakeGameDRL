@@ -38,7 +38,10 @@ def run_episode(model, reward_mode="length", render=False, seed=7):
         "steps": steps,
         "terminated": int(done),
         "time_out": int(info.get("time_out", 0)),
-        "turn_count": int(info.get("turn_count", 0))
+        "turn_count": int(info.get("turn_count", 0)),
+        "wall_turn_evade": int(info.get("wall_turn_evade", 0)),
+        "avg_food_time": info.get("avg_food_time", None),
+
     }
 
 
@@ -73,6 +76,9 @@ def main():
     term_rate   = float(np.mean([r["terminated"] for r in rows]))
     mean_turns = float(np.mean([r["turn_count"] for r in rows]))
     mean_timeout = float(np.mean([r["time_out"] for r in rows]))
+    mean_wall_turn_evade = float(np.mean([r["wall_turn_evade"] for r in rows]))
+    mean_food_time = float(np.nanmean([r["avg_food_time"] for r in rows if r["avg_food_time"] is not None]))
+
 
 
     print(f"Episodes: {len(rows)}")
@@ -83,9 +89,12 @@ def main():
     print(f"Termination rate (death): {term_rate*100:.1f}%")
     print(f"time_out (truncate): {mean_timeout*100:.1f}%")
     print(f"Mean turns: {mean_turns:.2f}")
+    print(f"Mean wall evade: {mean_wall_turn_evade:.2f}")
+    print(f"Mean avg food time (timesteps per food): {mean_food_time:.2f}")
+
 
     # Per-episode json
-    fieldnames = ["episode","reward","score","max_length","steps","terminated","mean_timeout","turn_count"]
+    #fieldnames = ["episode","reward","score","max_length","steps","terminated","mean_timeout","turn_count", "wall_turn_evade"]
     with open(args.json_out, "w", newline="") as f:
         json.dump(rows, f, indent=2)
     print(f"Saved metrics to {args.json_out}")
