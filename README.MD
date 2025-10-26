@@ -106,6 +106,10 @@ python visualize.py --model_path models/ppo_snake_survival --fps 60
 ```
 
 ```
+python visualize.py --model_path models/a2c_snake_survival --fps 60
+```
+
+```
 python eval.py --model_path models/ppo_snake_survival --reward_mode survival --episodes 10 --render 0 --json_out logs/survival_eval.json
 ```
 or
