@@ -37,8 +37,13 @@ class SnakeEnv(gym.Env):
         self.reset()
 
     def reset(self, *, seed=None, options=None):
-        self.snake_pos = [100, 40]
-        self.snake_body = [[100, 40], [90, 40], [80, 40]]
+        self.snake_pos = [self.frame_size_x // 2, self.frame_size_y // 2]
+        self.snake_body = [
+            [self.snake_pos[0], self.snake_pos[1]],
+            [self.snake_pos[0] - 10, self.snake_pos[1]],
+            [self.snake_pos[0] - 20, self.snake_pos[1]],
+        ]
+        #self.food_pos = [200, 100]
         self.food_pos = [random.randrange(1, self.frame_size_x//10) * 10,
         random.randrange(1, self.frame_size_y//10) * 10]
         self.score = 0
@@ -49,8 +54,8 @@ class SnakeEnv(gym.Env):
         self.wall_turn_evade = 0
         self.prev_food_dist = self._get_food_distance()
 
-        self.steps_since_food = 0
-        self.food_intervals = []
+        #self.steps_since_food = 0
+        #self.food_intervals = []
 
         return self._get_obs(), {}
 
@@ -99,14 +104,14 @@ class SnakeEnv(gym.Env):
         if self.reward_mode == "length":
             stepReward = self._length(terminated, ate_food, prev_direction)
         
-        self.steps_since_food += 1
+        #self.steps_since_food += 1
 
         # Eat food
         if ate_food:
             self.score += 1
 
-            self.food_intervals.append(self.steps_since_food)
-            self.steps_since_food = 0
+            #self.food_intervals.append(self.steps_since_food)
+            #self.steps_since_food = 0
 
             self.food_pos = [random.randrange(1, self.frame_size_x//10) * 10,
                              random.randrange(1, self.frame_size_y//10) * 10]
@@ -120,17 +125,15 @@ class SnakeEnv(gym.Env):
         time_out = self.steps >= self.max_steps 
         terminated = terminated or time_out
 
-        avg_food_time = float(np.mean(self.food_intervals)) if self.food_intervals else None
-
-
-        info = {
+        infos = {
             "score": self.score, 
             "turn_count": self.turnCount, 
             "time_out": time_out,
             "wall_turn_evade": self.wall_turn_evade,
-            "avg_food_time": avg_food_time
+            #"avg_food_time": avg_food_time
+            "reward_breakdown": self.last_reward_breakdown.copy()
         }
-        return self._get_obs(), stepReward, terminated, False, info
+        return self._get_obs(), stepReward, terminated, False, infos
 
     def render(self):
         # Only for render_mode == "human"
@@ -349,29 +352,23 @@ class SnakeEnv(gym.Env):
         min_dist = min(dist_x, dist_y)
         return min_dist / 100  # Reward staying near the center
     
-    def _food_approach_reward(self, modifier):
-        """
-        Rewards the agent for moving closer to the food, penalizes for moving away.
-        Returns:
-            float: Positive for decreasing distance, negative for increasing distance.
-        """
-        current_food_dist = self._get_food_distance()
-        distance_delta = current_food_dist - self.prev_food_dist
-
-        # Assign reward: discourage moving away, reward approaching
-        if distance_delta > 0:
-            reward = -1 * modifier
-        elif distance_delta < 0:
-            reward = 0.5 * modifier
+    def _move_closer_reward(self, modifier):
+        current_dist = self._get_food_distance()
+        if current_dist < self.prev_food_dist:
+            reward = modifier
         else:
-            reward = 0  # No change in distance
-
-        # Update tracker
-        self.prev_food_dist = current_food_dist
+            reward = 0
+        self.prev_food_dist = current_dist
         return reward
     
-    def _food_avoid_penalty():
-        return 0
+    def _move_away_punish(self, modifier):
+        current_dist = self._get_food_distance()
+        if current_dist > self.prev_food_dist:
+            penalty = -modifier
+        else:
+            penalty = 0
+        self.prev_food_dist = current_dist
+        return penalty
 
 
     def _survival(self, terminated):
@@ -383,13 +380,18 @@ class SnakeEnv(gym.Env):
         return totalReward
 
     def _length(self, terminated, ate_food, prev_direction):
-        totalReward = 0
-        totalReward += self._survival_reward(0, terminated)
-        totalReward += self._death_penalty(terminated, 30)
-        totalReward += self._food_eaten_reward(ate_food, 100)
-        #totalReward += self._food_distance_based_reward(0.5,-1)
-        totalReward += self._food_approach_reward(1)
-        totalReward += self._wall_evasion_reward(prev_direction, 0.1)
+        death_pen = self._death_penalty(terminated, 10)
+        food_eaten = self._food_eaten_reward(ate_food, 200)
+        move_closer = self._move_closer_reward(2)
+        move_away = self._move_away_punish(3)
 
+        totalReward = death_pen + food_eaten + move_closer + move_away
 
+        self.last_reward_breakdown = {
+            "death_penalty": death_pen,
+            "food_eaten": food_eaten,
+            "move_closer": move_closer,
+            "move_away": move_away,
+            "total": totalReward
+        }
         return totalReward

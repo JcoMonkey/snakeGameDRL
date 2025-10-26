@@ -118,5 +118,9 @@ python eval.py --model_path models/ppo_snake_survival --reward_mode survival --e
 ```
 
 ```
-pip install tensorboard
+pip install tensorboard tensorflow
+```
+
+```
+python train_ppo.py --timesteps 300000 --reward_mode length --seed 3 --logdir ./logs/sessionName
 ```

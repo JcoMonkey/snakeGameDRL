@@ -39,7 +39,17 @@
         totalReward += self._food_eaten_reward(ate_food, 100)
         #totalReward += self._food_distance_based_reward(0.5,-1)
         totalReward += self._food_approach_reward(1)
-        totalReward += self._wall_evasion_reward(prev_direction, 0.1)
+        totalReward += self._wall_evasion_reward(prev_direction, 5)
 
 
         return totalReward
+
+
+# trained for 300000, ent_coef 0.05, goes straight into wall
+def length():
+        totalReward = 0
+        totalReward += self._death_penalty(terminated, 10)
+        totalReward += self._food_eaten_reward(ate_food, 100)
+        totalReward += self._move_closer_reward(2)
+        totalReward += self._move_away_punish(3)
+

@@ -6,6 +6,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.logger import configure
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback, CallbackList
+from callbacks import TensorboardCallback, RewardBreakdownJSONCallback
 
 from snake_env import SnakeEnv   # <-- Changed this
 
@@ -44,7 +45,7 @@ def main():
         n_epochs=10,
         learning_rate=3e-4,
         clip_range=0.2,
-        ent_coef = 0.01,
+        ent_coef = 0.1,
         vf_coef = 0.5,
     )
 
@@ -70,12 +71,15 @@ def main():
         verbose=1
     )
 
-    eval_checkpoint_callback = CallbackList([checkpoint_callback, eval_callback])
+    json_callback = RewardBreakdownJSONCallback(json_path="./logs/reward_breakdown_log.json")
+    tensorboard_callback = TensorboardCallback()
+
+    all_callbacks = CallbackList([checkpoint_callback, eval_callback, tensorboard_callback, json_callback])
 
     print(f"TensorBoard logs will be saved to: {args.logdir}")
 
 
-    model.learn(total_timesteps=args.timesteps, progress_bar=True, callback=eval_checkpoint_callback)
+    model.learn(total_timesteps=args.timesteps, progress_bar=True, callback=all_callbacks)
 
     save_name = f"ppo_snake_{args.reward_mode}"   # This is the base name
     path = os.path.join(args.modeldir, save_name) # This is the full path **without .zip**
