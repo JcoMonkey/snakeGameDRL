@@ -116,3 +116,7 @@ or
 ```
 python eval.py --model_path models/ppo_snake_survival --reward_mode survival --episodes 10 --render 0 --json_out logs/survival_eval.json
 ```
+
+```
+pip install tensorboard
+```
