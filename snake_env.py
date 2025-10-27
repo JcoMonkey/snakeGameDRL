@@ -7,7 +7,7 @@ import random
 class SnakeEnv(gym.Env):
     metadata = {"render_modes": ["human"], "render_fps": 25}
 
-    def __init__(self, render_mode=None, reward_mode="length", seed=7, max_steps=4000):
+    def __init__(self, render_mode=None, reward_mode="length", seed=7, max_steps=4000, curriculum =True):
         super().__init__()
         self.frame_size_x = 300
         self.frame_size_y = 200
@@ -20,6 +20,8 @@ class SnakeEnv(gym.Env):
         )
         self.render_mode = render_mode
         self.max_steps = max_steps
+        self.episode_counter = 0
+        self.curriculum = curriculum
 
 
         # Pygame setup only if rendering
@@ -37,15 +39,14 @@ class SnakeEnv(gym.Env):
         self.reset()
 
     def reset(self, *, seed=None, options=None):
-        self.snake_pos = [self.frame_size_x // 2, self.frame_size_y // 2]
+        self.snake_pos = [self.frame_size_x // 2, self.frame_size_y // 2] #150, 100
         self.snake_body = [
             [self.snake_pos[0], self.snake_pos[1]],
             [self.snake_pos[0] - 10, self.snake_pos[1]],
             [self.snake_pos[0] - 20, self.snake_pos[1]],
         ]
-        #self.food_pos = [200, 100]
-        self.food_pos = [random.randrange(1, self.frame_size_x//10) * 10,
-        random.randrange(1, self.frame_size_y//10) * 10]
+        self.food_pos = [200, 100]
+            
         self.score = 0
         self.turnCount = 0
         self.direction = 3  # 0=UP,1=DOWN,2=LEFT,3=RIGHT
@@ -56,6 +57,39 @@ class SnakeEnv(gym.Env):
 
         #self.steps_since_food = 0
         #self.food_intervals = []
+
+        # first 300 episodes is deterministic food to teach snake to eat
+        self.episode_counter += 1
+        if self.curriculum and self.episode_counter < 300:
+            # Fixed spawn: food always 2 grid spaces ahead
+            direction = self.direction
+            if direction == 3:  # RIGHT
+                self.food_pos = [self.snake_pos[0] + 20, self.snake_pos[1]]
+            elif direction == 2:  # LEFT
+                self.food_pos = [self.snake_pos[0] - 20, self.snake_pos[1]]
+            elif direction == 0:  # UP
+                self.food_pos = [self.snake_pos[0], self.snake_pos[1] - 20]
+            elif direction == 1:  # DOWN
+                self.food_pos = [self.snake_pos[0], self.snake_pos[1] + 20]
+        elif self.curriculum and self.episode_counter < 1000:
+        # mix: 50% deterministic, 50% random. deterministic food placed farther ahead
+            if random.random() < 0.5:
+                direction = self.direction
+                if direction == 3:  # RIGHT
+                    self.food_pos = [self.snake_pos[0] + 30, self.snake_pos[1]]
+                elif direction == 2:  # LEFT
+                    self.food_pos = [self.snake_pos[0] - 30, self.snake_pos[1]]
+                elif direction == 0:  # UP
+                    self.food_pos = [self.snake_pos[0], self.snake_pos[1] - 30]
+                elif direction == 1:  # DOWN
+                    self.food_pos = [self.snake_pos[0], self.snake_pos[1] + 30]
+                else:
+                    self.food_pos = [random.randrange(1, self.frame_size_x // 10) * 10,
+                    random.randrange(1, self.frame_size_y // 10) * 10]
+        else:
+            # Full random
+            self.food_pos = [random.randrange(1, self.frame_size_x // 10) * 10,
+                            random.randrange(1, self.frame_size_y // 10) * 10]
 
         return self._get_obs(), {}
 
@@ -80,7 +114,7 @@ class SnakeEnv(gym.Env):
         
         stepReward = 0
         terminated = False
-        snake_body_turn_save = 0
+        snake_body_turn_evade = 0
         lastFood = 0
         #divide steps by score (reate of eating)
         #turn towards food
@@ -380,18 +414,20 @@ class SnakeEnv(gym.Env):
         return totalReward
 
     def _length(self, terminated, ate_food, prev_direction):
+        survive = self._survival_reward(terminated, 0.2)
         death_pen = self._death_penalty(terminated, 10)
         food_eaten = self._food_eaten_reward(ate_food, 200)
-        move_closer = self._move_closer_reward(2)
-        move_away = self._move_away_punish(3)
+        move_closer = self._move_closer_reward(1)
+        move_away = self._move_away_punish(0.5)
 
         totalReward = death_pen + food_eaten + move_closer + move_away
 
         self.last_reward_breakdown = {
+            "survival": survive,
             "death_penalty": death_pen,
             "food_eaten": food_eaten,
             "move_closer": move_closer,
             "move_away": move_away,
-            "total": totalReward
+            "total": totalReward,
         }
         return totalReward

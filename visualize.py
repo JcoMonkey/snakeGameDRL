@@ -11,10 +11,9 @@ def main():
 
     model = PPO.load(args.model_path)
 
-    env = SnakeEnv(render_mode="human")
+    env = SnakeEnv(render_mode="human", seed = 6, curriculum=False)
     obs, info = env.reset()
     done, trunc = False, False
-
 
 
     # Run one episode with deterministic actions

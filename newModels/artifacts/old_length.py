@@ -53,3 +53,22 @@ def length():
         totalReward += self._move_closer_reward(2)
         totalReward += self._move_away_punish(3)
 
+
+# trained for 700000, ent_coef 0.1, moves diagonally away from food, best model goes in circles
+    def _length(self, terminated, ate_food, prev_direction):
+        death_pen = self._death_penalty(terminated, 10)
+        food_eaten = self._food_eaten_reward(ate_food, 200)
+        move_closer = self._move_closer_reward(2)
+        move_away = self._move_away_punish(3)
+
+        totalReward = death_pen + food_eaten + move_closer + move_away
+
+        self.last_reward_breakdown = {
+            "death_penalty": death_pen,
+            "food_eaten": food_eaten,
+            "move_closer": move_closer,
+            "move_away": move_away,
+            "total": totalReward
+        }
+        return totalReward
+

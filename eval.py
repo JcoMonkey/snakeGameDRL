@@ -11,7 +11,8 @@ def run_episode(model, reward_mode="length", render=False, seed=7):
     env = DummyVecEnv([lambda: SnakeEnv(
         render_mode="human" if render else None,
         reward_mode=reward_mode,
-        seed=seed
+        seed=seed,
+        curriculum=False
     )])
     env = VecTransposeImage(env)
 
