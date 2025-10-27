@@ -38,14 +38,14 @@ def main():
         verbose=1,
         tensorboard_log=args.logdir,
         seed=args.seed,
-        n_steps=1024,
-        batch_size=256,
+        n_steps=2048,
+        batch_size=64,
         gamma=0.995,
         gae_lambda=0.95,
         n_epochs=10,
-        learning_rate=3e-4,
+        learning_rate=0.0003,
         clip_range=0.2,
-        ent_coef = 0.1,
+        ent_coef = 0.05,
         vf_coef = 0.5,
     )
 
