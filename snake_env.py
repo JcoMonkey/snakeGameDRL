@@ -63,6 +63,7 @@ class SnakeEnv(gym.Env):
         self.steps = 0
         self.wall_turn_evade = 0
         self.prev_food_dist = self._get_food_distance()
+        self.straight_steps = 0
 
         #self.steps_since_food = 0
         #self.food_intervals = []
@@ -248,10 +249,12 @@ class SnakeEnv(gym.Env):
         direction_to_food = self._get_direction_to_food()
         direction_vec[direction_to_food] = 1
         # Add danger sensors
-        danger_left = int(self._will_collide(2))  # LEFT
-        danger_right = int(self._will_collide(3)) # RIGHT
-        danger_straight = int(self._will_collide(self.direction))
-        extra_features = np.array([danger_left, danger_right, danger_straight] + list(direction_vec))
+        #danger_left = int(self._will_collide(2))  # LEFT
+        #danger_right = int(self._will_collide(3)) # RIGHT
+        #danger_straight = int(self._will_collide(self.direction))
+
+        #extra_features = np.array([danger_left, danger_right, danger_straight] + list(direction_vec), dtype=np.uint8)
+
 
         rows, cols, _ = obs.shape
         scale = 10  # Each grid cell is 10x10 
@@ -278,11 +281,8 @@ class SnakeEnv(gym.Env):
         if 0 <= fy < rows and 0 <= fx < cols:
             obs[fy, fx] = [255, 255, 255]
 
+        return obs
 
-        # store everything in grid
-        # add direction 
-
-        return (obs, extra_features)
 
 # danger function
 
@@ -409,8 +409,9 @@ class SnakeEnv(gym.Env):
         return reward
 
     
-    def _survival_reward(self, modifier, dead):
+    def _survival_reward(self, dead, modifier):
         reward = 0
+
         if not dead:
             return modifier
         
@@ -502,7 +503,7 @@ class SnakeEnv(gym.Env):
 
     def _survival(self, terminated):
         totalReward = 0
-        totalReward += self._survival_reward(0.1, terminated)
+        totalReward += self._survival_reward(terminated, 0.1)
         totalReward += self._death_penalty(terminated, 50)
         totalReward += self._heading_toward_wall_punish(0.5)
 
@@ -516,6 +517,8 @@ class SnakeEnv(gym.Env):
         move_away = self._move_away_punish(0.5)
         #give reward for facing towards apple
 
+        totalReward = survive + death_pen + food_eaten + move_closer + move_away
+
         if self.direction != prev_direction and self.direction == self._get_direction_to_food():
             totalReward += 2  # Reward for correct turn toward food
         if self.direction == prev_direction:
@@ -524,8 +527,6 @@ class SnakeEnv(gym.Env):
             self.straight_steps = 0
         if self.straight_steps > 10:
             totalReward -= 0.2  # Mild penalty for long straight sequences
-
-        totalReward = death_pen + food_eaten + move_closer + move_away
 
         self.last_reward_breakdown = {
             "survival": survive,

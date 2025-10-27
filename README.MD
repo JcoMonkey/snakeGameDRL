@@ -16,22 +16,25 @@ python3 -m venv .venv && source .venv/bin/activate  # (Windows: .venv\Scripts\ac
 # 2) Install deps
 pip install --upgrade pip
 pip install gymnasium stable-baselines3[extra] pygame numpy tensorboard
+pip install tensorflow
+pip install tensorboard
 
-# 3) Save the files below into the same folder, then train. choose mode if needed:
+# 3) Save the files below into the same folder, then train. choose mode if needed (length or survival):
 python train.py --timesteps 200000 --reward_mode length --seed 7
 
-# 4) Evaluate the trained agent (renders optional)
-python eval.py --episodes 10 --render 0
+# 4) Evaluate the trained agent ()
+python eval.py --model_path models/ppo_snake_{mode} --reward_mode {mode} --episodes 10 --render 0 --json_out logs/{mode}_eval.json
 
-# (Optional) Watch a live episode with rendering, chooose mode as needed
-python visualize.py --model_path models/ppo_snake_length --fps 60 
+# (Optional) Watch a live episode with rendering, chooose mode as needed (ppo_snake_{mode}). best_model is saved in the same models folder
+python visualize.py --model_path models/ppo_snake_{mode} --fps 60 
+
 ```
 
 **Folder layout (created at runtime):**
 
 ```
 ./
-  flappy_env.py
+  snake_env.py
   train.py
   eval.py
   visualize.py
@@ -45,17 +48,18 @@ python visualize.py --model_path models/ppo_snake_length --fps 60
 
 Key ideas:
 
-* Discrete(2) actions: **0=do nothing**, **1=flap**.
-* Observation = `[bird_y, bird_vel, next_pipe_x, gap_top, gap_bottom]` (all normalized to \~\[0,1]).
+
+* Discrete(4) actions: **0=Up**, **1=Down**, **2=Left**, **3=Right**
+* Observation = Genuinely don't know
 * Termination on **collision**; truncation on **max\_steps** (episode cap).
 * Two reward modes:
 
-  * `survival`: +0.1 per step alive, +1.0 for each pipe passed, −1.0 on crash.
-  * `coverage`: encourages exploring **new vertical bands** (simple testing proxy), +0.05 for first visit to a band in the episode, +0.05 per step alive, −1.0 on crash.
+  * `survival`: +0.1 per step alive, -50.0 for collision, −0.5 for being within 3 tiles of a wall. Goes in Circles to ensure surviving for maximum time
+  * `length`: Wants to eat apples.
 
 
 > **Where to inject faults (for testing):**
->
+> Change window parameters and add additional objects to collide with
 
 
 ## TensorBoard
@@ -74,7 +78,7 @@ Key ideas:
 2. **Launch TensorBoard** from your project root:
 
    ```bash
-   tensorboard --logdir ./logs --port 6006
+   python -m tensorboard.main --logdir logs/{session}
    ```
 
    By default it serves on `http://localhost:6006`.
@@ -94,35 +98,8 @@ Key ideas:
 
 
 
-# commands
-```
-python train_ppo.py --timesteps 200000 --reward_mode survival --seed 7
-```
+# Artifacts, screenshots, 
 
-```
-python visualize.py --model_path models/ppo_snake_survival --fps 60
-```
 
-```
-python visualize.py --model_path models/a2c_snake_survival --fps 60
-```
 
-```
-python eval.py --model_path models/ppo_snake_survival --reward_mode survival --episodes 10 --render 0 --json_out logs/survival_eval.json
-```
-or
-```
-python eval.py --model_path models/ppo_snake_survival --reward_mode survival --episodes 10 --render 0 --json_out logs/survival_eval.json
-```
-
-```
-pip install tensorboard tensorflow
-```
-
-```
-python train_ppo.py --timesteps 300000 --reward_mode length --seed 3 --logdir ./logs/sessionName
-```
-
-```
-python -m tensorboard.main --logdir logs/ppo_length_curriculum_3
-```
+# Observations and analysis
