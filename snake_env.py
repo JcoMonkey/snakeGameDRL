@@ -23,6 +23,15 @@ class SnakeEnv(gym.Env):
         self.episode_counter = 0
         self.curriculum = curriculum
 
+        self.last_reward_breakdown = {
+            "survival": 0.0,
+            "death_penalty": 0.0,
+            "food_eaten": 0.0,
+            "move_closer": 0.0,
+            "move_away": 0.0,
+            "total": 0.0,
+        }
+
 
         # Pygame setup only if rendering
         if render_mode == "human":
@@ -59,37 +68,83 @@ class SnakeEnv(gym.Env):
         #self.food_intervals = []
 
         # first 300 episodes is deterministic food to teach snake to eat
+        # teach it to turn, don't just have it go straight
         self.episode_counter += 1
-        if self.curriculum and self.episode_counter < 300:
-            # Fixed spawn: food always 2 grid spaces ahead
+        if self.curriculum and self.episode_counter < 100:
             direction = self.direction
             if direction == 3:  # RIGHT
-                self.food_pos = [self.snake_pos[0] + 20, self.snake_pos[1]]
+                # Randomly choose up or down
+                if random.random() < 0.5:
+                    # UP
+                    self.food_pos = [self.snake_pos[0], self.snake_pos[1] - 30]
+                else:
+                    # DOWN
+                    self.food_pos = [self.snake_pos[0], self.snake_pos[1] + 30]
             elif direction == 2:  # LEFT
-                self.food_pos = [self.snake_pos[0] - 20, self.snake_pos[1]]
+                # Similarly, force turns up or down for LEFT
+                if random.random() < 0.5:
+                    # UP
+                    self.food_pos = [self.snake_pos[0], self.snake_pos[1] - 30]
+                else:
+                    # DOWN
+                    self.food_pos = [self.snake_pos[0], self.snake_pos[1] + 30]
             elif direction == 0:  # UP
-                self.food_pos = [self.snake_pos[0], self.snake_pos[1] - 20]
+                # Randomly choose left or right
+                if random.random() < 0.5:
+                    self.food_pos = [self.snake_pos[0] - 30, self.snake_pos[1]]
+                else:
+                    self.food_pos = [self.snake_pos[0] + 30, self.snake_pos[1]]
             elif direction == 1:  # DOWN
-                self.food_pos = [self.snake_pos[0], self.snake_pos[1] + 20]
+                # Randomly choose left or right
+                if random.random() < 0.5:
+                    self.food_pos = [self.snake_pos[0] - 30, self.snake_pos[1]]
+                else:
+                    self.food_pos = [self.snake_pos[0] + 30, self.snake_pos[1]]
         elif self.curriculum and self.episode_counter < 1000:
         # mix: 50% deterministic, 50% random. deterministic food placed farther ahead
             if random.random() < 0.5:
                 direction = self.direction
                 if direction == 3:  # RIGHT
-                    self.food_pos = [self.snake_pos[0] + 30, self.snake_pos[1]]
+                    # Randomly choose up or down
+                    if random.random() < 0.5:
+                        # UP
+                        self.food_pos = [self.snake_pos[0] - 40, self.snake_pos[1] - 30]
+                    else:
+                        # DOWN
+                        self.food_pos = [self.snake_pos[0] - 40 , self.snake_pos[1] + 30]
                 elif direction == 2:  # LEFT
-                    self.food_pos = [self.snake_pos[0] - 30, self.snake_pos[1]]
+                    # Similarly, force turns up or down for LEFT
+                    if random.random() < 0.5:
+                        # UP
+                        self.food_pos = [self.snake_pos[0] -40, self.snake_pos[1] - 30]
+                    else:
+                        # DOWN
+                        self.food_pos = [self.snake_pos[0] - 40, self.snake_pos[1] + 30]
                 elif direction == 0:  # UP
-                    self.food_pos = [self.snake_pos[0], self.snake_pos[1] - 30]
+                    # Randomly choose left or right
+                    if random.random() < 0.5:
+                        self.food_pos = [self.snake_pos[0] - 30, self.snake_pos[1] - 40]
+                    else:
+                        self.food_pos = [self.snake_pos[0] + 30, self.snake_pos[1] - 40]
                 elif direction == 1:  # DOWN
-                    self.food_pos = [self.snake_pos[0], self.snake_pos[1] + 30]
-                else:
-                    self.food_pos = [random.randrange(1, self.frame_size_x // 10) * 10,
-                    random.randrange(1, self.frame_size_y // 10) * 10]
+                    # Randomly choose left or right
+                    if random.random() < 0.5:
+                        self.food_pos = [self.snake_pos[0] - 30, self.snake_pos[1] - 40]
+                    else:
+                        self.food_pos = [self.snake_pos[0] + 30, self.snake_pos[1] - 40]
         else:
             # Full random
             self.food_pos = [random.randrange(1, self.frame_size_x // 10) * 10,
                             random.randrange(1, self.frame_size_y // 10) * 10]
+            
+        self.last_reward_breakdown = {
+            "survival": 0.0,
+            "death_penalty": 0.0,
+            "food_eaten": 0.0,
+            "move_closer": 0.0,
+            "move_away": 0.0,
+            "total": 0.0,
+        }
 
         return self._get_obs(), {}
 
@@ -187,6 +242,17 @@ class SnakeEnv(gym.Env):
 
     def _get_obs(self):
         obs = np.zeros(self.observation_space.shape, dtype=np.uint8)
+        
+        # Add direction to food
+        direction_vec = np.zeros(4)  # [up, down, left, right]
+        direction_to_food = self._get_direction_to_food()
+        direction_vec[direction_to_food] = 1
+        # Add danger sensors
+        danger_left = int(self._will_collide(2))  # LEFT
+        danger_right = int(self._will_collide(3)) # RIGHT
+        danger_straight = int(self._will_collide(self.direction))
+        extra_features = np.array([danger_left, danger_right, danger_straight] + list(direction_vec))
+
         rows, cols, _ = obs.shape
         scale = 10  # Each grid cell is 10x10 
 
@@ -212,7 +278,36 @@ class SnakeEnv(gym.Env):
         if 0 <= fy < rows and 0 <= fx < cols:
             obs[fy, fx] = [255, 255, 255]
 
-        return obs
+
+        # store everything in grid
+        # add direction 
+
+        return (obs, extra_features)
+
+# danger function
+
+    def _will_collide(self, direction):
+        # Map direction to movement
+        directions = {
+            0: (0, -10),  # UP
+            1: (0, 10),   # DOWN
+            2: (-10, 0),  # LEFT
+            3: (10, 0),   # RIGHT
+        }
+        dx, dy = directions[direction]
+        next_pos = [self.snake_pos[0] + dx, self.snake_pos[1] + dy]
+
+        # Wall collision
+        if next_pos[0] < 0 or next_pos[0] > self.frame_size_x - 10:
+            return True
+        if next_pos[1] < 0 or next_pos[1] > self.frame_size_y - 10:
+            return True
+
+        # Self collision
+        if next_pos in self.snake_body:
+            return True
+
+        return False
 
     
     def _get_food_distance(self):
@@ -415,10 +510,20 @@ class SnakeEnv(gym.Env):
 
     def _length(self, terminated, ate_food, prev_direction):
         survive = self._survival_reward(terminated, 0.2)
-        death_pen = self._death_penalty(terminated, 10)
-        food_eaten = self._food_eaten_reward(ate_food, 200)
+        death_pen = self._death_penalty(terminated, 50)
+        food_eaten = self._food_eaten_reward(ate_food, 50)
         move_closer = self._move_closer_reward(1)
         move_away = self._move_away_punish(0.5)
+        #give reward for facing towards apple
+
+        if self.direction != prev_direction and self.direction == self._get_direction_to_food():
+            totalReward += 2  # Reward for correct turn toward food
+        if self.direction == prev_direction:
+            self.straight_steps += 1
+        else:
+            self.straight_steps = 0
+        if self.straight_steps > 10:
+            totalReward -= 0.2  # Mild penalty for long straight sequences
 
         totalReward = death_pen + food_eaten + move_closer + move_away
 

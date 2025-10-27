@@ -41,7 +41,7 @@ python visualize.py --model_path models/ppo_snake_length --fps 60
 
 ---
 
-## 2) The Environment: `flappy_env.py`
+## 2) The Environment: `snake_env.py`
 
 Key ideas:
 
@@ -56,9 +56,7 @@ Key ideas:
 
 > **Where to inject faults (for testing):**
 >
-> * Make `PIPE_GAP` sometimes too small (e.g., 60) after N frames.
-> * Randomly skip pipe collision for 1 frame.
-> * Flip sign of `GRAVITY` for a short burst.
+
 
 ## TensorBoard
 
@@ -123,4 +121,8 @@ pip install tensorboard tensorflow
 
 ```
 python train_ppo.py --timesteps 300000 --reward_mode length --seed 3 --logdir ./logs/sessionName
+```
+
+```
+python -m tensorboard.main --logdir logs/ppo_length_curriculum_3
 ```
