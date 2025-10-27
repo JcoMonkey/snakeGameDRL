@@ -35,11 +35,16 @@ python visualize.py --model_path models/ppo_snake_{mode} --fps 60
 ```
 ./
   snake_env.py
-  train.py
+  train_a2c.py
+  train_ppo.py
   eval.py
   visualize.py
   models/
   logs/
+  newModels/
+  oldVersions
+  src/
+  configs/
 ```
 
 ---
@@ -98,8 +103,26 @@ Key ideas:
 
 
 
-# Artifacts, screenshots, 
+# Artifacts, screenshots, oldVersions, newModels
 
+## oldVersions 
 
+are saved models from when the environment was 720x360 (window size was reduced to 300x200 to make training easier)
+
+## newModels
+
+models saved from the new 300x200 environment
+
+### artifacts
+
+e
+
+### bestModels
+
+e
 
 # Observations and analysis
+
+![alt text](img/ppo_length_metrics.png)
+
+I have no clue what I'm doing

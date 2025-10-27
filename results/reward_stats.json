@@ -1,9 +1,9 @@
 {
     "survival": {
-        "average_reward": 40.41000000000449,
+        "average_reward": 310.1000000000179,
         "episodes": 10,
-        "timestamps": "2025-10-26 01:41:41",
+        "timestamps": "2025-10-26 23:26:09",
         "timesteps": 200000,
-        "train_time_minutes": 11.93
+        "train_time_minutes": 15.54
     }
 }
